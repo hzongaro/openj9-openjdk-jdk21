@@ -47,7 +47,7 @@ import java.util.concurrent.atomic.AtomicReferenceArray;
 import java.util.concurrent.locks.LockSupport;
 
 public final class ParkLoops {
-    static final int THREADS = 4;
+    static final int THREADS = 256;
     static final int ITERS = 30_000;
 
     static class Parker implements Runnable {
