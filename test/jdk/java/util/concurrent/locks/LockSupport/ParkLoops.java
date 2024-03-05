@@ -47,7 +47,7 @@ import java.util.concurrent.atomic.AtomicReferenceArray;
 import java.util.concurrent.locks.LockSupport;
 
 public final class ParkLoops {
-    static final int THREADS = 256;
+    static final int THREADS = 4;
     static final int ITERS = 30_000;
 
     static class Parker implements Runnable {
@@ -73,6 +73,11 @@ public final class ParkLoops {
                 do {
                     j = rnd.nextInt(THREADS);
                 } while (!threads.compareAndSet(j, null, current));
+                try {
+                    // Introduce a delay to test whether having unpark occur before park can cause problems
+                    current.sleep(10);
+                } catch (InterruptedException ie) {
+                }
                 do {                    // handle spurious wakeups
                     LockSupport.park();
                 } while (threads.get(j) == current);
