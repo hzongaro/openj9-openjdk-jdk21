@@ -60,6 +60,8 @@ public final class ParkLoops {
         private final AtomicReferenceArray<Thread> threads;
         private final CountDownLatch done;
         private final SplittableRandom rnd;
+        private long started;
+        private long finished;
 
         Parker(AtomicReferenceArray<Thread> threads,
                  CountDownLatch done,
@@ -68,6 +70,7 @@ public final class ParkLoops {
         }
 
         public void run() {
+            started = System.nanoTime();
             final Thread current = Thread.currentThread();
             for (int k = ITERS, j; k > 0; k--) {
                 do {
@@ -78,6 +81,7 @@ public final class ParkLoops {
                 } while (threads.get(j) == current);
             }
             done.countDown();
+            finished = System.nanoTime();
         }
     }
 
@@ -91,6 +95,8 @@ public final class ParkLoops {
         private final AtomicReferenceArray<Thread> threads;
         private final CountDownLatch done;
         private final SplittableRandom rnd;
+        private long started;
+        private long finished;
 
         Unparker(AtomicReferenceArray<Thread> threads,
                  CountDownLatch done,
@@ -99,6 +105,7 @@ public final class ParkLoops {
         }
 
         public void run() {
+            started = System.nanoTime();
             for (int n = 0; (n++ & 0xff) != 0 || done.getCount() > 0;) {
                 int j = rnd.nextInt(THREADS);
                 Thread parker = threads.get(j);
@@ -107,6 +114,14 @@ public final class ParkLoops {
                     LockSupport.unpark(parker);
                 }
             }
+            finished = System.nanoTime();
+        }
+    }
+
+    static class TestHangException extends Exception {
+        public Runnable[] workers;
+        public TestHangException(Runnable[] workers) {
+            this.workers = workers;
         }
     }
 
@@ -116,10 +131,26 @@ public final class ParkLoops {
         final AtomicReferenceArray<Thread> threads
             = new AtomicReferenceArray<>(THREADS);
         final CountDownLatch done = new CountDownLatch(THREADS);
+        Runnable[] workers = new Runnable[2*THREADS];
+        int wrkidx = 0;
+
         for (int i = 0; i < THREADS; i++) {
-            pool.submit(new Parker(threads, done, rnd.split()));
-            pool.submit(new Unparker(threads, done, rnd.split()));
+            pool.submit(workers[wrkidx++] = new Parker(threads, done, rnd.split()));
+            pool.submit(workers[wrkidx++] = new Unparker(threads, done, rnd.split()));
         }
+
+        // Wait up to 5 minutes.  If test hasn't completed by then, throw a TestHangException
+        for (int i = 0; i < 5 && done.getCount() > 0; i++) {
+            try {
+                Thread.sleep(60*100);
+            } catch (InterruptedException ie) {
+            }
+        }
+
+        if (done.getCount() > 0) {
+            throw new TestHangException(workers);
+        }
+
         // Let test harness handle timeout
         done.await();
         pool.shutdown();
