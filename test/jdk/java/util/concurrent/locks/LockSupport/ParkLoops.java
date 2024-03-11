@@ -118,11 +118,7 @@ public final class ParkLoops {
         }
     }
 
-    static class TestHangException extends Exception {
-        public Runnable[] workers;
-        public TestHangException(Runnable[] workers) {
-            this.workers = workers;
-        }
+    public static void killIt() throws Exception {
     }
 
     public static void main(String[] args) throws Exception {
@@ -148,7 +144,7 @@ public final class ParkLoops {
         }
 
         if (done.getCount() > 0) {
-            throw new TestHangException(workers);
+            killIt();
         }
 
         // Let test harness handle timeout
