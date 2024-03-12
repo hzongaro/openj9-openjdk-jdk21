@@ -118,8 +118,7 @@ public final class ParkLoops {
         }
     }
 
-    public static void killIt() throws Exception {
-    }
+    public static Object[] cacheWorkers;
 
     public static void main(String[] args) throws Exception {
         final SplittableRandom rnd = new SplittableRandom();
@@ -135,7 +134,6 @@ public final class ParkLoops {
             pool.submit(workers[wrkidx++] = new Unparker(threads, done, rnd.split()));
         }
 
-        // Wait up to 5 minutes.  If test hasn't completed by then, throw a TestHangException
         for (int i = 0; i < 5 && done.getCount() > 0; i++) {
             try {
                 Thread.sleep(60*100);
@@ -143,13 +141,19 @@ public final class ParkLoops {
             }
         }
 
+        // If test hasn't completed, request a system dump
         if (done.getCount() > 0) {
-            killIt();
+            com.ibm.jvm.Dump.SystemDump();
+            com.ibm.jvm.Dump.JavaDump();
+            com.ibm.jvm.Dump.SnapDump();
+throw new Exception();
         }
 
         // Let test harness handle timeout
         done.await();
         pool.shutdown();
         pool.awaitTermination(Long.MAX_VALUE, SECONDS);
+
+        cacheWorkers = workers;
     }
 }
