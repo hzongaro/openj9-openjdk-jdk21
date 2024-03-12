@@ -134,21 +134,6 @@ public final class ParkLoops {
             pool.submit(workers[wrkidx++] = new Unparker(threads, done, rnd.split()));
         }
 
-        for (int i = 0; i < 5 && done.getCount() > 0; i++) {
-            try {
-                Thread.sleep(60*100);
-            } catch (InterruptedException ie) {
-            }
-        }
-
-        // If test hasn't completed, request a system dump
-        if (done.getCount() > 0) {
-            com.ibm.jvm.Dump.SystemDump();
-            com.ibm.jvm.Dump.JavaDump();
-            com.ibm.jvm.Dump.SnapDump();
-throw new Exception();
-        }
-
         // Let test harness handle timeout
         done.await();
         pool.shutdown();
