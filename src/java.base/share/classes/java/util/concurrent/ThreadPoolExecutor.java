@@ -400,6 +400,13 @@ public class ThreadPoolExecutor extends AbstractExecutorService {
     private static int workerCountOf(int c)  { return c & COUNT_MASK; }
     private static int ctlOf(int rs, int wc) { return rs | wc; }
 
+    private final AtomicInteger workerInfo = new AtomicInteger(0);
+    private static final int INTERRUPTED_WORKER     = 0x00000001;
+    private static final int ADD_WORKER_FAILED      = 0x00000010;
+    private static final int WORKER_EXITED          = 0x00000100;
+    private static final int WORKER_EXITED_ABRUPTLY = 0x00001000;
+    private static final int WORKER_TIMED_OUT       = 0x00010000;
+
     /*
      * Bit field accessors that don't require unpacking ctl.
      * These depend on the bit layout and on workerCount being never negative.
@@ -975,6 +982,7 @@ public class ThreadPoolExecutor extends AbstractExecutorService {
             if (w != null)
                 workers.remove(w);
             decrementWorkerCount();
+workerInfo.getAndAdd(ADD_WORKER_FAILED);
             tryTerminate();
         } finally {
             mainLock.unlock();
@@ -995,6 +1003,7 @@ public class ThreadPoolExecutor extends AbstractExecutorService {
      * @param completedAbruptly if the worker died due to user exception
      */
     private void processWorkerExit(Worker w, boolean completedAbruptly) {
+workerInfo.getAndAdd(completedAbruptly ? WORKER_EXITED_ABRUPTLY : WORKER_EXITED);
         if (completedAbruptly) // If abrupt, then workerCount wasn't adjusted
             decrementWorkerCount();
 
@@ -1060,7 +1069,10 @@ public class ThreadPoolExecutor extends AbstractExecutorService {
             if ((wc > maximumPoolSize || (timed && timedOut))
                 && (wc > 1 || workQueue.isEmpty())) {
                 if (compareAndDecrementWorkerCount(c))
+{
+workerInfo.getAndAdd(WORKER_TIMED_OUT);
                     return null;
+}
                 continue;
             }
 
