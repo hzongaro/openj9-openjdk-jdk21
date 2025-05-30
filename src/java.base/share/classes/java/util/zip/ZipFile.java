@@ -1265,7 +1265,7 @@ public class ZipFile implements ZipConstants, Closeable {
                     zcp.toString(cen, start, clen);
                 }
             } catch (Exception e) {
-                zerror("invalid CEN header (bad entry name or comment)");
+                zerror("invalid CEN header (bad entry name or comment)", e);
             }
             return nlen;
         }
@@ -1792,6 +1792,10 @@ public class ZipFile implements ZipConstants, Closeable {
 
         private static void zerror(String msg) throws ZipException {
             throw new ZipException(msg);
+        }
+
+        private static void zerror(String msg, Throwable cause) throws ZipException {
+            throw new ZipException(msg, cause);
         }
 
         /*
