@@ -56,4 +56,11 @@ public class ZipException extends IOException {
     public ZipException(String s) {
         super(s);
     }
+
+    public ZipException(Throwable cause) {
+        super(cause);
+    }
+    public ZipException(String s, Throwable cause) {
+        super(s, cause);
+    }
 }
